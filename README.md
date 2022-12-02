@@ -1,0 +1,1 @@
+# mach-composer-plugin-azure
