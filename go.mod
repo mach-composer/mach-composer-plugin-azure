@@ -6,8 +6,8 @@ require (
 	github.com/creasty/defaults v1.6.0
 	github.com/elliotchance/pie/v2 v2.1.0
 	github.com/flosch/pongo2/v5 v5.0.0
-	github.com/mach-composer/mach-composer-plugin-helpers v0.0.0-20221202072054-1466d29fb44b
-	github.com/mach-composer/mach-composer-plugin-sdk v0.0.0-20221202071618-359695a58c1a
+	github.com/mach-composer/mach-composer-plugin-helpers v0.0.1
+	github.com/mach-composer/mach-composer-plugin-sdk v0.0.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/sirupsen/logrus v1.9.0
 )
