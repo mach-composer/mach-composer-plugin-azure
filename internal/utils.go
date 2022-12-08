@@ -12,7 +12,7 @@ import (
 // compatability; existing environments already have a `functionapp` resource.
 // We want to keep that intact.
 func azureServicePlanResourceName(value string) string {
-	name := "funtionapps"
+	name := "functionapps"
 	if value != "default" {
 		name = fmt.Sprintf("functionapps_%s", value)
 	}
