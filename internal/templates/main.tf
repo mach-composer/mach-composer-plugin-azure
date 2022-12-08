@@ -11,7 +11,7 @@ locals {
   subscription_id              = "{{ azure.SubscriptionID }}"
 
   region_short                 = "{{ azure.ShortRegionName() }}"
-  name_prefix                  = format("{{ global.Azure.ResourcesPrefix }}{{ siteName|short_prefix }}-%s", local.region_short)
+  name_prefix                  = format("{{ global.ResourcesPrefix }}{{ siteName|short_prefix }}-%s", local.region_short)
 
   service_object_ids           = {
       {% for key, value in azure.ServiceObjectIds %}

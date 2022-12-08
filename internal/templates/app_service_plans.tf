@@ -1,4 +1,4 @@
-{% for key, plan in site.Azure.ServicePlans %}
+{% for key, plan in azure.ServicePlans %}
 
 {% if plan.DedicatedResourceGroup %}
 resource "azurerm_resource_group" "{{ key }}" {
@@ -21,7 +21,7 @@ resource "azurerm_app_service_plan" "{{ key|service_plan_resource_name }}" {
   kind                = "{{ plan.Kind }}"
   reserved            = {% if plan.Kind|lower == 'windows' %}false{% else %}true
   {% endif %}
-  per_site_scaling    = "{{ plan.PerSiteScaling }}"
+  per_site_scaling    = {{ plan.PerSiteScaling|tf }}
 
   sku {
     tier = "{{ plan.Tier }}"
