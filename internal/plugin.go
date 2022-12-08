@@ -228,7 +228,7 @@ func (p *AzurePlugin) TerraformRenderResources(site string) (string, error) {
 	for _, componentName := range cfg.Components {
 		component, ok := p.componentConfigs[componentName]
 		if !ok {
-			return "", fmt.Errorf("missing component config")
+			continue
 		}
 
 		for internal, external := range component.Endpoints {
