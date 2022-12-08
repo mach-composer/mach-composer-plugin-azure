@@ -9,27 +9,9 @@ import (
 )
 
 func init() {
-	helpers.MustRegisterFilter("azure_frontend_endpoint_name", AzureFrontendEndpointName)
 	helpers.MustRegisterFilter("service_plan_resource_name", AzureServicePlanResourceName)
-	helpers.MustRegisterFilter("component_endpoint_name", filterComponentEndpointName)
 	helpers.MustRegisterFilter("short_prefix", filterShortPrefix)
 	helpers.MustRegisterFilter("remove", filterRemove)
-}
-
-func AzureFrontendEndpointName(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
-	// val, ok := in.Interface().(config.Endpoint)
-	// if !ok {
-	// 	return nil, &pongo2.Error{
-	// 		Sender:    "filter:azure_frontend_endpoint_name",
-	// 		OrigError: fmt.Errorf("filter expected argument of type Endpoint"),
-	// 	}
-	// }
-
-	// if val.Azure != nil && val.Azure.InternalName != "" {
-	// 	return shared.FilterTFValue(pongo2.AsSafeValue(val.Azure.InternalName), nil)
-	// }
-	// return shared.FilterTFValue(pongo2.AsSafeValue(val.Key), nil)
-	return pongo2.AsSafeValue("TODO"), nil
 }
 
 // AzureServicePlanResourceName Retrieve the resource name for a Azure app service plan.
@@ -38,37 +20,6 @@ func AzureFrontendEndpointName(in *pongo2.Value, param *pongo2.Value) (*pongo2.V
 func AzureServicePlanResourceName(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
 	val := azureServicePlanResourceName(in.String())
 	return pongo2.AsSafeValue(val), nil
-}
-
-// Take a component and a site-endpoint, and return a Terraform reference to
-// an output. The endpoint might have a different name in the component itself
-// based on the mappings
-func filterComponentEndpointName(in *pongo2.Value, param *pongo2.Value) (*pongo2.Value, *pongo2.Error) {
-	// component, ok := in.Interface().(config.SiteComponent)
-	// if !ok {
-	// 	return nil, &pongo2.Error{
-	// 		Sender:    "filter:component_endpoint_name",
-	// 		OrigError: fmt.Errorf("filter only works on site component"),
-	// 	}
-	// }
-	// endpoint, ok := param.Interface().(config.Endpoint)
-	// if !ok {
-	// 	return nil, &pongo2.Error{
-	// 		Sender:    "filter:component_endpoint_name",
-	// 		OrigError: fmt.Errorf("filter expected argument of type Endpoint"),
-	// 	}
-	// }
-
-	// for componentKey, epKey := range component.Definition.Endpoints {
-	// 	if epKey == endpoint.Key {
-	// 		return pongo2.AsSafeValue(componentKey), nil
-	// 	}
-	// }
-	// return nil, &pongo2.Error{
-	// 	Sender:    "filter:component_endpoint_name",
-	// 	OrigError: fmt.Errorf("endpoint %s not found on %s", endpoint.Key, component.Name),
-	// }
-	return nil, nil
 }
 
 // Specific function created to be backwards compatible with Python version

@@ -38,6 +38,8 @@ type SiteConfig struct {
 	Region           string
 	ServiceObjectIds map[string]string           `mapstructure:"service_object_ids"`
 	ServicePlans     map[string]AzureServicePlan `mapstructure:"service_plans"`
+
+	Components []string
 }
 
 func (a *SiteConfig) merge(c *GlobalConfig) {
@@ -82,28 +84,36 @@ func (a *SiteConfig) LongRegionName() string {
 type ComponentConfig struct {
 	Endpoints map[string]string `mapstructure:"-"`
 
+	Name        string `mapstructure:"-"`
 	ServicePlan string `mapstructure:"service_plan"`
 	ShortName   string `mapstructure:"short_name"`
 }
 
-// func (c *ComponentConfig) Merge() {
-// 	if c.ServicePlan == "" {
-// 		c.ServicePlan = config.ServicePlan
-// 	}
-// 	if c.ShortName == "" {
-// 		c.ShortName = config.ShortName
-// 	}
-// }
+func (c *ComponentConfig) SetDefaults() {
+	if c.ShortName == "" {
+		c.ShortName = c.Name
+	}
+
+}
+
+type SiteComponent struct {
+	InternalName string
+	ExternalName string
+	Component    *ComponentConfig
+}
 
 type EndpointConfig struct {
-	URL  string `yaml:"url"`
-	Key  string `yaml:"key"`
-	Zone string `yaml:"zone"`
+	URL  string `mapstructure:"url"`
+	Key  string `mapstructure:"key"`
+	Zone string `mapstructure:"zone"`
 
 	SessionAffinityEnabled bool   `mapstructure:"session_affinity_enabled"`
 	SessionAffinityTTL     int    `mapstructure:"session_affinity_ttl_seconds"`
 	WAFPolicyID            string `mapstructure:"waf_policy_id"`
 	InternalName           string `mapstructure:"internal_name"`
+
+	Active     bool            `mapstructure:"-"`
+	Components []SiteComponent `mapstructure:"-"`
 }
 
 func (e *EndpointConfig) SetDefaults() {

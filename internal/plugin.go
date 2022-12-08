@@ -2,7 +2,6 @@ package internal
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/creasty/defaults"
@@ -18,7 +17,7 @@ func NewAzurePlugin() schema.MachComposerPlugin {
 	state := &AzurePlugin{
 		provider:         "2.99.0",
 		siteConfigs:      map[string]SiteConfig{},
-		componentConfigs: map[string]ComponentConfig{},
+		componentConfigs: map[string]*ComponentConfig{},
 		endpointsConfigs: map[string]map[string]EndpointConfig{},
 	}
 
@@ -29,10 +28,11 @@ func NewAzurePlugin() schema.MachComposerPlugin {
 		IsEnabled: state.IsEnabled,
 
 		// Config
-		SetRemoteStateBackend: state.SetRemoteStateBackend,
-		SetGlobalConfig:       state.SetGlobalConfig,
-		SetSiteConfig:         state.SetSiteConfig,
-		SetComponentConfig:    state.SetComponentConfig,
+		SetRemoteStateBackend:  state.SetRemoteStateBackend,
+		SetGlobalConfig:        state.SetGlobalConfig,
+		SetSiteConfig:          state.SetSiteConfig,
+		SetComponentConfig:     state.SetComponentConfig,
+		SetSiteComponentConfig: state.SetSiteComponentConfig,
 
 		// Config endpoints
 		SetSiteEndpointsConfig:      state.SetSiteEndpointsConfig,
@@ -52,7 +52,7 @@ type AzurePlugin struct {
 	remoteState      *AzureTFState
 	globalConfig     *GlobalConfig
 	siteConfigs      map[string]SiteConfig
-	componentConfigs map[string]ComponentConfig
+	componentConfigs map[string]*ComponentConfig
 	endpointsConfigs map[string]map[string]EndpointConfig
 }
 
@@ -105,6 +105,21 @@ func (p *AzurePlugin) SetSiteConfig(site string, data map[string]any) error {
 		)
 	}
 
+	if cfg.ServicePlans == nil {
+		cfg.ServicePlans = make(map[string]AzureServicePlan)
+	}
+
+	p.siteConfigs[site] = cfg
+	return nil
+}
+
+func (p *AzurePlugin) SetSiteComponentConfig(site, component string, data map[string]any) error {
+	cfg, ok := p.siteConfigs[site]
+	if !ok {
+		return fmt.Errorf("invalid site: %s", site)
+	}
+
+	cfg.Components = append(cfg.Components, component)
 	p.siteConfigs[site] = cfg
 	return nil
 }
@@ -145,20 +160,24 @@ func (p *AzurePlugin) SetSiteEndpointsConfig(site string, data map[string]any) e
 func (p *AzurePlugin) SetComponentConfig(component string, data map[string]any) error {
 	cfg, ok := p.componentConfigs[component]
 	if !ok {
-		cfg = ComponentConfig{}
+		cfg = &ComponentConfig{}
+		p.componentConfigs[component] = cfg
 	}
-	if err := mapstructure.Decode(data, &cfg); err != nil {
+	if err := mapstructure.Decode(data, cfg); err != nil {
 		return err
 	}
-	p.componentConfigs[component] = cfg
+	cfg.Name = component
+	cfg.SetDefaults()
 	return nil
 }
 
 func (p *AzurePlugin) SetComponentEndpointsConfig(component string, endpoints map[string]string) error {
 	cfg, ok := p.componentConfigs[component]
-	if ok {
-		cfg.Endpoints = endpoints
+	if !ok {
+		cfg = &ComponentConfig{}
+		p.componentConfigs[component] = cfg
 	}
+	cfg.Endpoints = endpoints
 	return nil
 }
 
@@ -189,7 +208,7 @@ func (p *AzurePlugin) TerraformRenderProviders(site string) (string, error) {
 	}
 
 	result := fmt.Sprintf(`
-		azure = {
+		azurerm = {
 			version = "%s"
 		}`, helpers.VersionConstraint(p.provider))
 	return result, nil
@@ -201,34 +220,48 @@ func (p *AzurePlugin) TerraformRenderResources(site string) (string, error) {
 		return "", nil
 	}
 
-	activeEndpoints := map[string]EndpointConfig{}
-	siteEndpoint := p.endpointsConfigs[site]
+	siteEndpoints := p.endpointsConfigs[site]
+	defaultEndpoint := EndpointConfig{
+		Key: "default",
+	}
 
-	needsDefaultEndpoint := false
-	for _, component := range p.componentConfigs {
-		for _, external := range component.Endpoints {
-			if external == "default" {
-				needsDefaultEndpoint = true
+	for _, componentName := range cfg.Components {
+		component, ok := p.componentConfigs[componentName]
+		if !ok {
+			return "", fmt.Errorf("missing component config")
+		}
+
+		for internal, external := range component.Endpoints {
+			endpointConfig, ok := siteEndpoints[external]
+			if !ok {
+				if external == "default" {
+					endpointConfig = defaultEndpoint
+				} else {
+					return "", fmt.Errorf("component requires undeclared endpoint: %s", external)
+				}
 			}
 
-			endpointConfig, ok := siteEndpoint[external]
-			if !ok && external != "default" {
-				log.Fatalf("component requires undeclared endpoint: %s", external)
-			}
+			endpointConfig.Active = true
 
-			if _, ok := activeEndpoints[external]; !ok {
-				activeEndpoints[external] = endpointConfig
+			sc := SiteComponent{
+				InternalName: internal,
+				ExternalName: external,
+				Component:    component,
 			}
+			endpointConfig.Components = append(endpointConfig.Components, sc)
+			siteEndpoints[external] = endpointConfig
 		}
 	}
 
-	if needsDefaultEndpoint {
-		activeEndpoints["default"] = EndpointConfig{
-			Key: "default",
+	if _, ok := cfg.ServicePlans["default"]; !ok {
+		cfg.ServicePlans["default"] = AzureServicePlan{
+			Kind: "FunctionApp",
+			Tier: "Dynamic",
+			Size: "Y1",
 		}
 	}
 
-	return renderResources(site, p.environment, cfg, pie.Values(activeEndpoints))
+	return renderResources(site, p.environment, cfg, p.globalConfig, pie.Values(siteEndpoints))
 }
 
 func (p *AzurePlugin) RenderTerraformComponent(site string, component string) (*schema.ComponentSchema, error) {
@@ -261,15 +294,16 @@ func (p *AzurePlugin) getSiteConfig(site string) *SiteConfig {
 	if !ok {
 		return nil
 	}
+	cfg.merge(p.globalConfig)
 	return &cfg
 }
 
 func (p *AzurePlugin) getComponentConfig(name string) *ComponentConfig {
 	componentConfig, ok := p.componentConfigs[name]
 	if !ok {
-		componentConfig = ComponentConfig{} // TODO
+		componentConfig = &ComponentConfig{} // TODO
 	}
-	return &componentConfig
+	return componentConfig
 }
 
 func terraformRenderComponentVars(cfg *SiteConfig, componentCfg *ComponentConfig) (string, error) {

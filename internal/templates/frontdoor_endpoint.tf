@@ -1,7 +1,8 @@
-{% for component in endpoint.Components %}
+{% for sc in endpoint.Components %}
 
 {# set the component endpoint key #}
-{% set cep_key = component|component_endpoint_name:endpoint %}
+{% set cep_key = sc.InternalName %}
+{% set component = sc.Component %}
 backend_pool_health_probe {
   name = "{{ endpoint.Key }}-{{ component.Name }}-hpSettings"
   path = lookup(module.{{ component.Name }}.azure_endpoint_{{ cep_key }}, "health_probe_path", "/")
@@ -11,7 +12,7 @@ backend_pool_health_probe {
 }
 
 dynamic "routing_rule" {
-  for_each = local.fd_{{ endpoint.key }}_{{ component.Name }}_routes
+  for_each = local.fd_{{ endpoint.Key }}_{{ component.Name }}_routes
   content {
     name = "{{ endpoint.Key }}-{{ component.Name }}-routing-${lookup(routing_rule.value, "name", routing_rule.key)}"
 
@@ -19,9 +20,9 @@ dynamic "routing_rule" {
     patterns_to_match  = routing_rule.value.patterns
     frontend_endpoints = [
       {% if endpoint.URL %}
-      {{ endpoint|azure_frontend_endpoint_name }},
+        "{{ endpoint.InternalName|default:endpoint.Key }}",
       {% else %}
-      local.frontdoor_domain_identifier,
+        local.frontdoor_domain_identifier,
       {% endif %}
     ]
     forwarding_configuration {
