@@ -88,8 +88,11 @@ func (p *AzurePlugin) SetGlobalConfig(data map[string]any) error {
 }
 
 func (p *AzurePlugin) SetSiteConfig(site string, data map[string]any) error {
-	cfg := SiteConfig{}
+	if len(data) == 0 {
+		return nil
+	}
 
+	cfg := SiteConfig{}
 	if err := mapstructure.Decode(data, &cfg); err != nil {
 		return err
 	}
@@ -116,7 +119,7 @@ func (p *AzurePlugin) SetSiteConfig(site string, data map[string]any) error {
 func (p *AzurePlugin) SetSiteComponentConfig(site, component string, data map[string]any) error {
 	cfg, ok := p.siteConfigs[site]
 	if !ok {
-		return fmt.Errorf("invalid site: %s", site)
+		return nil
 	}
 
 	cfg.Components = append(cfg.Components, component)
