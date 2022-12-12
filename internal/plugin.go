@@ -88,7 +88,6 @@ func (p *AzurePlugin) SetGlobalConfig(data map[string]any) error {
 }
 
 func (p *AzurePlugin) SetSiteConfig(site string, data map[string]any) error {
-
 	// If data is empty then exit early since we only want to take action when
 	// there is data.
 	if len(data) == 0 {

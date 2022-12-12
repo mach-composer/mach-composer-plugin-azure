@@ -93,7 +93,6 @@ func (c *ComponentConfig) SetDefaults() {
 	if c.ShortName == "" {
 		c.ShortName = c.Name
 	}
-
 }
 
 type SiteComponent struct {
