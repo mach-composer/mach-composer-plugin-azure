@@ -1,0 +1,96 @@
+{
+    "type": "object",
+    "description": "Azure configuration.",
+    "required": [
+        "tenant_id",
+        "subscription_id",
+        "region"
+    ],
+    "additionalProperties": false,
+    "properties": {
+        "tenant_id": {
+            "type": "string"
+        },
+        "subscription_id": {
+            "type": "string"
+        },
+        "region": {
+            "type": "string"
+        },
+        "frontdoor": {
+            "type": "object",
+            "required": [
+                "dns_resource_group"
+            ],
+            "properties": {
+                "dns_resource_group": {
+                    "type": "string"
+                },
+                "ssl_key_vault": {
+                    "type": "object",
+                    "required": [
+                        "name",
+                        "resource_group",
+                        "secret_name"
+                    ],
+                    "properties": {
+                        "name": {
+                            "type": "string"
+                        },
+                        "resource_group": {
+                            "type": "string"
+                        },
+                        "secret_name": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "suppress_changes": {
+                    "type": "boolean"
+                }
+            },
+            "description": "Frontdoor settings."
+        },
+        "resources_prefix": {
+            "type": "string"
+        },
+        "service_object_ids": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "string"
+            }
+        },
+        "service_plans": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "object",
+                "required": [
+                    "kind",
+                    "tier",
+                    "size"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                    "kind": {
+                        "type": "string"
+                    },
+                    "tier": {
+                        "type": "string"
+                    },
+                    "size": {
+                        "type": "string"
+                    },
+                    "capacity": {
+                        "type": "integer"
+                    },
+                    "dedicated_resource_group": {
+                        "type": "boolean"
+                    },
+                    "per_site_scaling": {
+                        "type": "boolean"
+                    }
+                }
+            }
+        }
+    }
+}

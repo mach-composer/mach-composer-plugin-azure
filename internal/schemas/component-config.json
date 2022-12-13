@@ -1,0 +1,11 @@
+{
+    "type": "object",
+    "properties": {
+        "service_plan": {
+            "type": "string"
+        },
+        "short_name": {
+            "type": "string"
+        }
+    }
+}

@@ -1,0 +1,18 @@
+{
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+        "session_affinity_enabled": {
+            "type": "boolean"
+        },
+        "session_affinity_ttl_seconds": {
+            "type": "integer"
+        },
+        "waf_policy_id": {
+            "type": "string"
+        },
+        "internal_name": {
+            "type": "string"
+        }
+    }
+}

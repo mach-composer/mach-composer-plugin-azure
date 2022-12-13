@@ -27,6 +27,9 @@ func NewPlugin() schema.MachComposerPlugin {
 		Configure: state.Configure,
 		IsEnabled: state.IsEnabled,
 
+		// Schema
+		GetValidationSchema: state.GetValidationSchema,
+
 		// Config
 		SetRemoteStateBackend:  state.SetRemoteStateBackend,
 		SetGlobalConfig:        state.SetGlobalConfig,
@@ -78,6 +81,11 @@ func (p *Plugin) SetRemoteStateBackend(data map[string]any) error {
 	}
 	p.remoteState = state
 	return nil
+}
+
+func (p *Plugin) GetValidationSchema() (*schema.ValidationSchema, error) {
+	result := getSchema()
+	return result, nil
 }
 
 func (p *Plugin) SetGlobalConfig(data map[string]any) error {
