@@ -13,8 +13,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func NewAzurePlugin() schema.MachComposerPlugin {
-	state := &AzurePlugin{
+func NewPlugin() schema.MachComposerPlugin {
+	state := &Plugin{
 		provider:         "2.99.0",
 		siteConfigs:      map[string]SiteConfig{},
 		componentConfigs: map[string]*ComponentConfig{},
@@ -46,7 +46,7 @@ func NewAzurePlugin() schema.MachComposerPlugin {
 	})
 }
 
-type AzurePlugin struct {
+type Plugin struct {
 	environment      string
 	provider         string
 	remoteState      *AzureTFState
@@ -56,7 +56,7 @@ type AzurePlugin struct {
 	endpointsConfigs map[string]map[string]EndpointConfig
 }
 
-func (p *AzurePlugin) Configure(environment string, provider string) error {
+func (p *Plugin) Configure(environment string, provider string) error {
 	p.environment = environment
 	if provider != "" {
 		p.provider = provider
@@ -64,11 +64,11 @@ func (p *AzurePlugin) Configure(environment string, provider string) error {
 	return nil
 }
 
-func (p *AzurePlugin) IsEnabled() bool {
+func (p *Plugin) IsEnabled() bool {
 	return len(p.siteConfigs) > 0
 }
 
-func (p *AzurePlugin) SetRemoteStateBackend(data map[string]any) error {
+func (p *Plugin) SetRemoteStateBackend(data map[string]any) error {
 	state := &AzureTFState{}
 	if err := mapstructure.Decode(data, state); err != nil {
 		return err
@@ -80,14 +80,14 @@ func (p *AzurePlugin) SetRemoteStateBackend(data map[string]any) error {
 	return nil
 }
 
-func (p *AzurePlugin) SetGlobalConfig(data map[string]any) error {
+func (p *Plugin) SetGlobalConfig(data map[string]any) error {
 	if err := mapstructure.Decode(data, &p.globalConfig); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (p *AzurePlugin) SetSiteConfig(site string, data map[string]any) error {
+func (p *Plugin) SetSiteConfig(site string, data map[string]any) error {
 	// If data is empty then exit early since we only want to take action when
 	// there is data.
 	if len(data) == 0 {
@@ -118,7 +118,7 @@ func (p *AzurePlugin) SetSiteConfig(site string, data map[string]any) error {
 	return nil
 }
 
-func (p *AzurePlugin) SetSiteComponentConfig(site, component string, data map[string]any) error {
+func (p *Plugin) SetSiteComponentConfig(site, component string, data map[string]any) error {
 	cfg, ok := p.siteConfigs[site]
 	if !ok {
 		return nil
@@ -129,7 +129,7 @@ func (p *AzurePlugin) SetSiteComponentConfig(site, component string, data map[st
 	return nil
 }
 
-func (p *AzurePlugin) SetSiteEndpointsConfig(site string, data map[string]any) error {
+func (p *Plugin) SetSiteEndpointsConfig(site string, data map[string]any) error {
 	configs := map[string]EndpointConfig{}
 	for epId, epData := range data {
 		cfg := EndpointConfig{}
@@ -162,7 +162,7 @@ func (p *AzurePlugin) SetSiteEndpointsConfig(site string, data map[string]any) e
 	return nil
 }
 
-func (p *AzurePlugin) SetComponentConfig(component string, data map[string]any) error {
+func (p *Plugin) SetComponentConfig(component string, data map[string]any) error {
 	cfg, ok := p.componentConfigs[component]
 	if !ok {
 		cfg = &ComponentConfig{}
@@ -176,7 +176,7 @@ func (p *AzurePlugin) SetComponentConfig(component string, data map[string]any) 
 	return nil
 }
 
-func (p *AzurePlugin) SetComponentEndpointsConfig(component string, endpoints map[string]string) error {
+func (p *Plugin) SetComponentEndpointsConfig(component string, endpoints map[string]string) error {
 	cfg, ok := p.componentConfigs[component]
 	if !ok {
 		cfg = &ComponentConfig{}
@@ -186,7 +186,7 @@ func (p *AzurePlugin) SetComponentEndpointsConfig(component string, endpoints ma
 	return nil
 }
 
-func (p *AzurePlugin) TerraformRenderStateBackend(site string) (string, error) {
+func (p *Plugin) TerraformRenderStateBackend(site string) (string, error) {
 	templateContext := struct {
 		State *AzureTFState
 		Site  string
@@ -206,7 +206,7 @@ func (p *AzurePlugin) TerraformRenderStateBackend(site string) (string, error) {
 	return helpers.RenderGoTemplate(template, templateContext)
 }
 
-func (p *AzurePlugin) TerraformRenderProviders(site string) (string, error) {
+func (p *Plugin) TerraformRenderProviders(site string) (string, error) {
 	cfg := p.getSiteConfig(site)
 	if cfg == nil {
 		return "", nil
@@ -219,7 +219,7 @@ func (p *AzurePlugin) TerraformRenderProviders(site string) (string, error) {
 	return result, nil
 }
 
-func (p *AzurePlugin) TerraformRenderResources(site string) (string, error) {
+func (p *Plugin) TerraformRenderResources(site string) (string, error) {
 	cfg := p.getSiteConfig(site)
 	if cfg == nil {
 		return "", nil
@@ -269,7 +269,7 @@ func (p *AzurePlugin) TerraformRenderResources(site string) (string, error) {
 	return renderResources(site, p.environment, cfg, p.globalConfig, pie.Values(siteEndpoints))
 }
 
-func (p *AzurePlugin) RenderTerraformComponent(site string, component string) (*schema.ComponentSchema, error) {
+func (p *Plugin) RenderTerraformComponent(site string, component string) (*schema.ComponentSchema, error) {
 	cfg := p.getSiteConfig(site)
 	if cfg == nil {
 		return nil, nil
@@ -294,7 +294,7 @@ func (p *AzurePlugin) RenderTerraformComponent(site string, component string) (*
 	return result, nil
 }
 
-func (p *AzurePlugin) getSiteConfig(site string) *SiteConfig {
+func (p *Plugin) getSiteConfig(site string) *SiteConfig {
 	cfg, ok := p.siteConfigs[site]
 	if !ok {
 		return nil
@@ -303,7 +303,7 @@ func (p *AzurePlugin) getSiteConfig(site string) *SiteConfig {
 	return &cfg
 }
 
-func (p *AzurePlugin) getComponentConfig(name string) *ComponentConfig {
+func (p *Plugin) getComponentConfig(name string) *ComponentConfig {
 	componentConfig, ok := p.componentConfigs[name]
 	if !ok {
 		componentConfig = &ComponentConfig{} // TODO
