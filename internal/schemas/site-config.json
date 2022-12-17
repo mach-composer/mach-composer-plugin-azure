@@ -83,34 +83,29 @@
         "service_plans": {
             "type": "object",
             "additionalProperties": {
-                "type": "object",
-                "additionalProperties": {
-                    "type": "object",
-                    "required": [
-                        "kind",
-                        "tier",
-                        "size"
-                    ],
-                    "additionalProperties": false,
-                    "properties": {
-                        "kind": {
-                            "type": "string"
-                        },
-                        "tier": {
-                            "type": "string"
-                        },
-                        "size": {
-                            "type": "string"
-                        },
-                        "capacity": {
-                            "type": "integer"
-                        },
-                        "dedicated_resource_group": {
-                            "type": "boolean"
-                        },
-                        "per_site_scaling": {
-                            "type": "boolean"
-                        }
+                "required": [
+                    "kind",
+                    "tier",
+                    "size"
+                ],
+                "properties": {
+                    "kind": {
+                        "type": "string"
+                    },
+                    "tier": {
+                        "type": "string"
+                    },
+                    "size": {
+                        "type": "string"
+                    },
+                    "capacity": {
+                        "type": "integer"
+                    },
+                    "dedicated_resource_group": {
+                        "type": "boolean"
+                    },
+                    "per_site_scaling": {
+                        "type": "boolean"
                     }
                 }
             }
