@@ -1,0 +1,8 @@
+
+	backend "azurerm" {
+	  resource_group_name  = "my-resource-group"
+	  storage_account_name = "mystorageacc"
+	  container_name       = "tfstate"
+	  key                  = "test/my-site"
+	}
+	

@@ -1,0 +1,31 @@
+{
+    "Global": null,
+    "RemoteState": null,
+    "Components": {
+        "api-extensions": null,
+        "payment": {
+            "service_plan": "default"
+        },
+        "product-types-ecommerce": null
+    },
+    "ComponentEndpoints": {
+        "payment": {
+            "main": "main"
+        }
+    },
+    "Sites": {
+        "my-site": null
+    },
+    "SiteEndpoints": {
+        "my-site": null
+    },
+    "SiteComponents": {
+        "my-site": {
+            "api-extensions": null,
+            "payment": {
+                "service_plan": "critical"
+            },
+            "product-types-ecommerce": null
+        }
+    }
+}

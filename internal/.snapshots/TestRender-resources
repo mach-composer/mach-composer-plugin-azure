@@ -1,0 +1,310 @@
+provider "azurerm" {
+  subscription_id = "2717eeaf-6a56-4f1e-abe8-7e5c45d575ba"
+  tenant_id       = "a6ec481e-21ee-4cf4-b617-c708e96a888c"
+  skip_provider_registration = true
+  features {}
+}
+
+locals {
+  tenant_id                    = "a6ec481e-21ee-4cf4-b617-c708e96a888c"
+  region                       = "centralus"
+  subscription_id              = "2717eeaf-6a56-4f1e-abe8-7e5c45d575ba"
+
+  region_short                 = "cus"
+  name_prefix                  = format("my-my-site-%s", local.region_short)
+
+  service_object_ids           = {
+      
+          developers = "e3ee073a-e730-41aa-b785-b34a5b20718f"
+      
+  }
+
+  tags = {
+    Site        = "my-site"
+    Environment = ""
+  }
+}
+
+
+resource "azurerm_resource_group" "main" {
+  name     = format("%s-rg", local.name_prefix)
+  location = "Central US"
+  tags = local.tags
+}
+
+
+locals {
+  
+    resource_group_name = azurerm_resource_group.main.name
+    resource_group_location = azurerm_resource_group.main.location
+  
+}
+
+
+
+
+
+resource "azurerm_monitor_action_group" "alert_action_group" {
+  name                = "my-site-critical"
+  resource_group_name = azurerm_resource_group.main.name
+  short_name          = "critical"
+
+  
+
+  
+
+  
+}
+
+
+locals {
+  frontdoor_domain            = format("%s-fd.azurefd.net", local.name_prefix)
+  frontdoor_domain_identifier = replace(local.frontdoor_domain, ".", "-")
+}
+
+
+data "azurerm_dns_zone" "main" {
+    name                = "example.org"
+    resource_group_name = "my-resource-group"
+}
+
+  
+resource "azurerm_dns_cname_record" "main" {
+  name                = "mach"
+  zone_name           = data.azurerm_dns_zone.main.name
+  resource_group_name = "my-resource-group"
+  ttl                 = 600
+  record              = local.frontdoor_domain
+}
+  
+
+
+
+locals {
+  
+    
+      
+      
+  fd_main_payment_route_defs = lookup(
+    module.payment.azure_endpoint_main,
+    "routes",
+    [{
+      patterns = ["/payment/*"]
+    }]
+  )
+
+  fd_main_payment_routes = {
+    for i in range(
+      length(
+        local.fd_main_payment_route_defs
+      )
+    ) :
+    i => element(
+      local.fd_main_payment_route_defs,
+      i
+    )
+  }
+    
+  
+}
+
+resource "azurerm_frontdoor" "app-service" {
+  name                                          = format("%s-fd", local.name_prefix)
+  resource_group_name                           = local.resource_group_name
+  enforce_backend_pools_certificate_name_check  = false
+  tags = local.tags
+
+  backend_pool_load_balancing {
+    name = "lbSettings"
+  }
+
+  frontend_endpoint {
+    name                              = local.frontdoor_domain_identifier
+    host_name                         = local.frontdoor_domain
+  }
+
+  
+  frontend_endpoint {
+    name                              = "main"
+    host_name                         = "mach.example.org"
+    
+
+    
+
+  }
+  
+
+  depends_on = [
+    
+    
+    azurerm_dns_cname_record.main,
+    
+    
+  ]
+
+  routing_rule {
+    name               = "http-https-redirect"
+    accepted_protocols = ["Http"]
+    patterns_to_match  = ["/*"]
+    frontend_endpoints = [
+      local.frontdoor_domain_identifier,
+      
+        "main",
+      
+    ]
+    redirect_configuration {
+      redirect_type     = "PermanentRedirect"
+      redirect_protocol = "HttpsOnly"
+    }
+  }
+
+  
+    
+
+
+
+
+backend_pool_health_probe {
+  name = "main-payment-hpSettings"
+  path = lookup(module.payment.azure_endpoint_main, "health_probe_path", "/")
+  protocol = lookup(module.payment.azure_endpoint_main, "health_probe_protocol", "Https")
+  enabled = contains(keys(module.payment.azure_endpoint_main), "health_probe_path")
+  probe_method = lookup(module.payment.azure_endpoint_main, "health_probe_method", "GET")
+}
+dynamic "routing_rule" {
+  for_each = local.fd_main_payment_routes
+  content {
+    name = "main-payment-routing-${lookup(routing_rule.value, "name", routing_rule.key)}"
+    accepted_protocols = ["Https"]
+    patterns_to_match  = routing_rule.value.patterns
+    frontend_endpoints = [
+      
+        "main",
+      
+    ]
+    forwarding_configuration {
+        forwarding_protocol            = "MatchRequest"
+        backend_pool_name              = "main-payment"
+        cache_enabled                  = lookup(routing_rule.value, "cache_enabled", false)
+        custom_forwarding_path         = lookup(routing_rule.value, "custom_forwarding_path", null)
+    }
+  }
+}
+
+backend_pool {
+  name = "main-payment"
+  backend {
+      host_header = lookup(module.payment.azure_endpoint_main, "host_header", module.payment.azure_endpoint_main.address)
+      address     = module.payment.azure_endpoint_main.address
+      http_port   = lookup(module.payment.azure_endpoint_main, "http_port", 80)
+      https_port  = lookup(module.payment.azure_endpoint_main, "https_port", 443)
+  }
+
+  load_balancing_name = "lbSettings"
+  health_probe_name   = "main-payment-hpSettings"
+}
+
+
+  
+
+  
+  # Work-around for a very annoying bug in the Azure Frontdoor API
+  # causing unwanted changes in Frontdoor and raising errors.
+  lifecycle {
+    ignore_changes = [
+      routing_rule,
+      backend_pool,
+      backend_pool_health_probe,
+      frontend_endpoint,
+    ]
+  }
+  
+}
+
+
+
+
+resource "azurerm_frontdoor_custom_https_configuration" "main" {
+  frontend_endpoint_id              = azurerm_frontdoor.app-service.frontend_endpoints["main"]
+  custom_https_provisioning_enabled = true
+
+  custom_https_configuration {
+    
+    certificate_source                      = "FrontDoor"
+    
+  }
+}
+
+
+
+locals {
+
+endpoint_url_main = "mach.example.org"
+
+}
+
+output "endpoints" {
+  value = {
+  main: local.endpoint_url_main
+  
+  }
+}
+
+
+
+
+
+resource "azurerm_resource_group" "critical" {
+  name     = "${local.resource_group_name}-critical"
+  location = local.resource_group_location
+  tags     = local.tags
+}
+
+
+resource "azurerm_app_service_plan" "functionapps_critical" {
+  
+  name                = "${local.name_prefix}-critical-plan"
+  
+  resource_group_name = azurerm_resource_group.critical.name
+  
+  location            = local.resource_group_location
+  kind                = "FunctionApp"
+  reserved            = true
+  
+  per_site_scaling    = false
+
+  sku {
+    tier = "Dynamic"
+    size = "Y1"
+    
+  }
+
+  tags = local.tags
+}
+
+
+
+
+resource "azurerm_app_service_plan" "functionapps" {
+  
+  name                = "${local.name_prefix}-plan"
+  
+  resource_group_name = local.resource_group_name
+  
+  location            = local.resource_group_location
+  kind                = "FunctionApp"
+  reserved            = true
+  
+  per_site_scaling    = false
+
+  sku {
+    tier = "Dynamic"
+    size = "Y1"
+    
+  }
+
+  tags = local.tags
+}
+
+
+

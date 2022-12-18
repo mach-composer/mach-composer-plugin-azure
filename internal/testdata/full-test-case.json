@@ -1,0 +1,70 @@
+{
+    "Global": {
+        "frontdoor": {
+            "dns_resource_group": "my-resource-group",
+            "suppress_changes": true
+        },
+        "region": "westeurope",
+        "resources_prefix": "my-",
+        "service_object_ids": {
+            "developers": "e3ee073a-e730-41aa-b785-b34a5b20718f"
+        },
+        "subscription_id": "2717eeaf-6a56-4f1e-abe8-7e5c45d575ba",
+        "tenant_id": "a6ec481e-21ee-4cf4-b617-c708e96a888c"
+    },
+    "RemoteState": {
+        "container_name": "tfstate",
+        "resource_group": "my-resource-group",
+        "state_folder": "test",
+        "storage_account": "mystorageacc"
+    },
+    "Components": {
+        "api-extensions": {
+            "service_plan": "default",
+            "short_name": "apiexts"
+        },
+        "payment": {
+            "service_plan": "default"
+        },
+        "product-types-ecommerce": {
+            "short_name": "pt-ecom"
+        }
+    },
+    "ComponentEndpoints": {
+        "payment": {
+            "main": "main"
+        }
+    },
+    "Sites": {
+        "my-site": {
+            "alert_group": {
+                "name": "critical"
+            },
+            "region": "centralus",
+            "service_plans": {
+                "critical": {
+                    "dedicated_resource_group": true,
+                    "kind": "FunctionApp",
+                    "size": "Y1",
+                    "tier": "Dynamic"
+                }
+            }
+        }
+    },
+    "SiteEndpoints": {
+        "my-site": {
+            "main": {
+                "url": "https://mach.example.org"
+            }
+        }
+    },
+    "SiteComponents": {
+        "my-site": {
+            "api-extensions": null,
+            "payment": {
+                "service_plan": "critical"
+            },
+            "product-types-ecommerce": null
+        }
+    }
+}
