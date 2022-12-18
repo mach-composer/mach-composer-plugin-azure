@@ -14,7 +14,7 @@ locals {
   name_prefix                  = format("{{ global.ResourcesPrefix }}{{ siteName|short_prefix }}-%s", local.region_short)
 
   service_object_ids           = {
-      {% for key, value in azure.ServiceObjectIds %}
+      {% for key, value in azure.ServiceObjectIds sorted %}
           {{ key }} = "{{ value }}"
       {% endfor %}
   }

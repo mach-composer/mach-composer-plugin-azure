@@ -1,4 +1,4 @@
-{% for key, plan in azure.ServicePlans %}
+{% for key, plan in azure.ServicePlans sorted%}
 
 {% if plan.DedicatedResourceGroup %}
 resource "azurerm_resource_group" "{{ key }}" {
