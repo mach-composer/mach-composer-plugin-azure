@@ -171,10 +171,12 @@ backend_pool_health_probe {
   enabled = contains(keys(module.payment.azure_endpoint_main), "health_probe_path")
   probe_method = lookup(module.payment.azure_endpoint_main, "health_probe_method", "GET")
 }
+
 dynamic "routing_rule" {
   for_each = local.fd_main_payment_routes
   content {
     name = "main-payment-routing-${lookup(routing_rule.value, "name", routing_rule.key)}"
+
     accepted_protocols = ["Https"]
     patterns_to_match  = routing_rule.value.patterns
     frontend_endpoints = [
