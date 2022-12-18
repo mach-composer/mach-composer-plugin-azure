@@ -2,6 +2,15 @@
     "type": "object",
     "additionalProperties": false,
     "properties": {
+        "key": {
+            "type": "string"
+        },
+        "url": {
+            "type": "string"
+        },
+        "zone": {
+            "type": "string"
+        },
         "session_affinity_enabled": {
             "type": "boolean"
         },

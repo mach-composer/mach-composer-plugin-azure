@@ -7,6 +7,6 @@ import (
 )
 
 func Serve() {
-	p := internal.NewPlugin()
+	p := internal.NewAzurePlugin()
 	plugin.ServePlugin(p)
 }

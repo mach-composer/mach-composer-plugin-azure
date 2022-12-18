@@ -10,14 +10,13 @@ import (
 	"github.com/mach-composer/mach-composer-plugin-sdk/plugin"
 	"github.com/mach-composer/mach-composer-plugin-sdk/schema"
 	"github.com/mitchellh/mapstructure"
-	"github.com/sirupsen/logrus"
 )
 
-func NewPlugin() schema.MachComposerPlugin {
+func NewAzurePlugin() schema.MachComposerPlugin {
 	state := &Plugin{
 		provider:         "2.99.0",
 		siteConfigs:      map[string]SiteConfig{},
-		componentConfigs: map[string]*ComponentConfig{},
+		componentConfigs: map[string]ComponentConfig{},
 		endpointsConfigs: map[string]map[string]EndpointConfig{},
 	}
 
@@ -38,7 +37,7 @@ func NewPlugin() schema.MachComposerPlugin {
 		SetSiteComponentConfig: state.SetSiteComponentConfig,
 
 		// Config endpoints
-		SetSiteEndpointsConfig:      state.SetSiteEndpointsConfig,
+		SetSiteEndpointConfig:       state.SetSiteEndpointConfig,
 		SetComponentEndpointsConfig: state.SetComponentEndpointsConfig,
 
 		// Renders
@@ -55,7 +54,7 @@ type Plugin struct {
 	remoteState      *AzureTFState
 	globalConfig     *GlobalConfig
 	siteConfigs      map[string]SiteConfig
-	componentConfigs map[string]*ComponentConfig
+	componentConfigs map[string]ComponentConfig
 	endpointsConfigs map[string]map[string]EndpointConfig
 }
 
@@ -98,11 +97,17 @@ func (p *Plugin) SetGlobalConfig(data map[string]any) error {
 func (p *Plugin) SetSiteConfig(site string, data map[string]any) error {
 	// If data is empty then exit early since we only want to take action when
 	// there is data.
-	if len(data) == 0 {
+	if data == nil {
 		return nil
 	}
 
-	cfg := SiteConfig{}
+	if p.globalConfig == nil {
+		return fmt.Errorf("a global azure config is required for setting per-site configuration")
+	}
+
+	cfg := SiteConfig{
+		Components: make(map[string]SiteComponentConfig),
+	}
 	if err := mapstructure.Decode(data, &cfg); err != nil {
 		return err
 	}
@@ -132,40 +137,47 @@ func (p *Plugin) SetSiteComponentConfig(site, component string, data map[string]
 		return nil
 	}
 
-	cfg.Components = append(cfg.Components, component)
+	c := SiteComponentConfig{
+		Name: component,
+	}
+	if err := mapstructure.Decode(data, &c); err != nil {
+		return err
+	}
+
+	cfg.Components[component] = c
 	p.siteConfigs[site] = cfg
 	return nil
 }
 
-func (p *Plugin) SetSiteEndpointsConfig(site string, data map[string]any) error {
-	configs := map[string]EndpointConfig{}
-	for epId, epData := range data {
-		cfg := EndpointConfig{}
-		if url, ok := epData.(string); ok {
-			cfg.URL = url
-		} else {
-			if mapData, ok := epData.(map[string]any); ok {
-				if val, ok := mapData["azure"].(map[string]any); ok {
-					logrus.Warnln("Warning: the azure node on the endpoint will be removed. Set the children directly in the endpoint")
-					for key, value := range val {
-						mapData[key] = value
-					}
-				}
-			}
-
-			if err := mapstructure.Decode(epData, &cfg); err != nil {
-				return err
-			}
-		}
-
-		if err := defaults.Set(&cfg); err != nil {
-			return err
-		}
-
-		cfg.Key = epId
-		configs[epId] = cfg
+func (p *Plugin) SetSiteEndpointConfig(site string, name string, data map[string]any) error {
+	// If data is empty then exit early since we only want to take action when
+	// there is data.
+	if data == nil {
+		return nil
 	}
 
+	if p.globalConfig == nil {
+		return fmt.Errorf("a global azure config is required for setting per-site endpoint configuration")
+	}
+
+	configs, ok := p.endpointsConfigs[site]
+	if !ok {
+		configs = map[string]EndpointConfig{}
+	}
+
+	cfg := EndpointConfig{
+		Key: name,
+	}
+
+	if err := mapstructure.Decode(data, &cfg); err != nil {
+		return err
+	}
+
+	if err := defaults.Set(&cfg); err != nil {
+		return err
+	}
+
+	configs[name] = cfg
 	p.endpointsConfigs[site] = configs
 	return nil
 }
@@ -173,28 +185,33 @@ func (p *Plugin) SetSiteEndpointsConfig(site string, data map[string]any) error 
 func (p *Plugin) SetComponentConfig(component string, data map[string]any) error {
 	cfg, ok := p.componentConfigs[component]
 	if !ok {
-		cfg = &ComponentConfig{}
-		p.componentConfigs[component] = cfg
+		cfg = ComponentConfig{}
 	}
-	if err := mapstructure.Decode(data, cfg); err != nil {
+	if err := mapstructure.Decode(data, &cfg); err != nil {
 		return err
 	}
 	cfg.Name = component
 	cfg.SetDefaults()
+	p.componentConfigs[component] = cfg
 	return nil
 }
 
 func (p *Plugin) SetComponentEndpointsConfig(component string, endpoints map[string]string) error {
 	cfg, ok := p.componentConfigs[component]
 	if !ok {
-		cfg = &ComponentConfig{}
+		cfg = ComponentConfig{}
 		p.componentConfigs[component] = cfg
 	}
 	cfg.Endpoints = endpoints
+	p.componentConfigs[component] = cfg
 	return nil
 }
 
 func (p *Plugin) TerraformRenderStateBackend(site string) (string, error) {
+	if p.remoteState == nil {
+		return "", nil
+	}
+
 	templateContext := struct {
 		State *AzureTFState
 		Site  string
@@ -238,8 +255,16 @@ func (p *Plugin) TerraformRenderResources(site string) (string, error) {
 		Key: "default",
 	}
 
-	for _, componentName := range cfg.Components {
-		component, ok := p.componentConfigs[componentName]
+	if _, ok := cfg.ServicePlans["default"]; !ok {
+		cfg.ServicePlans["default"] = AzureServicePlan{
+			Kind: "FunctionApp",
+			Tier: "Dynamic",
+			Size: "Y1",
+		}
+	}
+
+	for _, siteComponent := range cfg.Components {
+		component, ok := p.componentConfigs[siteComponent.Name]
 		if !ok {
 			continue
 		}
@@ -259,18 +284,16 @@ func (p *Plugin) TerraformRenderResources(site string) (string, error) {
 			sc := SiteComponent{
 				InternalName: internal,
 				ExternalName: external,
-				Component:    component,
+				Component:    &component,
 			}
 			endpointConfig.Components = append(endpointConfig.Components, sc)
-			siteEndpoints[external] = endpointConfig
-		}
-	}
 
-	if _, ok := cfg.ServicePlans["default"]; !ok {
-		cfg.ServicePlans["default"] = AzureServicePlan{
-			Kind: "FunctionApp",
-			Tier: "Dynamic",
-			Size: "Y1",
+			endpointConfig.Components = pie.SortUsing(
+				endpointConfig.Components,
+				func(a SiteComponent, b SiteComponent) bool {
+					return a.Component.Name < b.Component.Name
+				})
+			siteEndpoints[external] = endpointConfig
 		}
 	}
 
@@ -282,19 +305,24 @@ func (p *Plugin) RenderTerraformComponent(site string, component string) (*schem
 	if cfg == nil {
 		return nil, nil
 	}
-	componentCfg := p.getComponentConfig(component)
+
+	siteComponent, ok := cfg.Components[component]
+	if !ok {
+		return nil, fmt.Errorf("missing config for component")
+	}
+	siteComponent.Component = p.getComponentConfig(component)
 
 	result := &schema.ComponentSchema{
 		Providers: []string{"azurerm = azurerm"},
 	}
 
-	value, err := terraformRenderComponentVars(cfg, componentCfg)
+	value, err := terraformRenderComponentVars(cfg, &siteComponent)
 	if err != nil {
 		return nil, err
 	}
 	result.Variables = value
 
-	values, err := terraformRenderComponentDependsOn(cfg, componentCfg)
+	values, err := terraformRenderComponentDependsOn(cfg, &siteComponent)
 	if err != nil {
 		return nil, err
 	}
@@ -314,27 +342,29 @@ func (p *Plugin) getSiteConfig(site string) *SiteConfig {
 func (p *Plugin) getComponentConfig(name string) *ComponentConfig {
 	componentConfig, ok := p.componentConfigs[name]
 	if !ok {
-		componentConfig = &ComponentConfig{} // TODO
+		componentConfig = ComponentConfig{} // TODO
 	}
-	return componentConfig
+	return &componentConfig
 }
 
-func terraformRenderComponentVars(cfg *SiteConfig, componentCfg *ComponentConfig) (string, error) {
+func terraformRenderComponentVars(cfg *SiteConfig, componentCfg *SiteComponentConfig) (string, error) {
 	endpointNames := map[string]string{}
-	for key, value := range componentCfg.Endpoints {
+	for key, value := range componentCfg.Component.Endpoints {
 		endpointNames[helpers.Slugify(key)] = helpers.Slugify(value)
 	}
 
 	templateContext := struct {
-		Config      *SiteConfig
-		Component   *ComponentConfig
-		ServicePlan string
-		Endpoints   map[string]string
+		Config        *SiteConfig
+		SiteComponent *SiteComponentConfig
+		Component     *ComponentConfig
+		ServicePlan   string
+		Endpoints     map[string]string
 	}{
-		Config:      cfg,
-		Component:   componentCfg,
-		ServicePlan: azureServicePlanResourceName(componentCfg.ServicePlan),
-		Endpoints:   endpointNames,
+		Config:        cfg,
+		SiteComponent: componentCfg,
+		Component:     componentCfg.Component,
+		ServicePlan:   componentCfg.getServicePlanResourceName(),
+		Endpoints:     endpointNames,
 	}
 
 	template := `
@@ -372,14 +402,7 @@ func terraformRenderComponentVars(cfg *SiteConfig, componentCfg *ComponentConfig
 	return helpers.RenderGoTemplate(template, templateContext)
 }
 
-func terraformRenderComponentDependsOn(cfg *SiteConfig, componentCfg *ComponentConfig) ([]string, error) {
-	if componentCfg.ServicePlan != "" {
-		if componentCfg.ServicePlan == "default" {
-			return []string{"azurerm_app_service_plan.functionapps"}, nil
-		} else {
-			val := fmt.Sprintf("azurerm_app_service_plan.functionapps_%s", componentCfg.ServicePlan)
-			return []string{val}, nil
-		}
-	}
-	return []string{}, nil
+func terraformRenderComponentDependsOn(cfg *SiteConfig, componentCfg *SiteComponentConfig) ([]string, error) {
+	name := fmt.Sprintf("azurerm_app_service_plan.%s", componentCfg.getServicePlanResourceName())
+	return []string{name}, nil
 }

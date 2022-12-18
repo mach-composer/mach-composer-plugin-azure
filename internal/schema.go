@@ -19,7 +19,7 @@ func getSchema() *schema.ValidationSchema {
 	// These are the same (intended)
 	loadSchemaNode("schemas/component-config.json", &s.ComponentConfigSchema)
 	loadSchemaNode("schemas/component-config.json", &s.SiteComponentConfigSchema)
-	loadSchemaNode("schemas/site-endpoint-config.json", &s.SiteEndpointsConfig)
+	loadSchemaNode("schemas/site-endpoint-config.json", &s.SiteEndpointConfig)
 
 	return &s
 }

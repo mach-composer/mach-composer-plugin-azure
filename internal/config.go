@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -39,7 +40,7 @@ type SiteConfig struct {
 	ServiceObjectIds map[string]string           `mapstructure:"service_object_ids"`
 	ServicePlans     map[string]AzureServicePlan `mapstructure:"service_plans"`
 
-	Components []string
+	Components map[string]SiteComponentConfig
 }
 
 func (a *SiteConfig) merge(c *GlobalConfig) {
@@ -93,6 +94,32 @@ func (c *ComponentConfig) SetDefaults() {
 	if c.ShortName == "" {
 		c.ShortName = c.Name
 	}
+}
+
+type SiteComponentConfig struct {
+	ServicePlan string `mapstructure:"service_plan"`
+
+	Name      string           `mapstructure:"-"`
+	Component *ComponentConfig `mapstructure:"-"`
+}
+
+// getServicePlanResourceName returns the resource name for a Azure app service
+// plan.
+// The reason to make this conditional is because of backwards compatability;
+// existing environments already have a `functionapp` resource. We want to keep
+// that intact.
+func (sc *SiteComponentConfig) getServicePlanResourceName() string {
+	value := "default"
+	if sc.ServicePlan != "" {
+		value = sc.ServicePlan
+	} else if sc.Component != nil && sc.Component.ServicePlan != "" {
+		value = sc.Component.ServicePlan
+	}
+
+	if value == "default" {
+		return "functionapps"
+	}
+	return fmt.Sprintf("functionapps_%s", value)
 }
 
 type SiteComponent struct {
