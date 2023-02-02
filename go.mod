@@ -4,9 +4,9 @@ go 1.19
 
 require (
 	github.com/creasty/defaults v1.6.0
-	github.com/elliotchance/pie/v2 v2.1.0
+	github.com/elliotchance/pie/v2 v2.2.0
 	github.com/flosch/pongo2/v5 v5.0.0
-	github.com/mach-composer/mach-composer-plugin-helpers v0.0.2
+	github.com/mach-composer/mach-composer-plugin-helpers v0.0.4
 	github.com/mach-composer/mach-composer-plugin-sdk v0.0.5
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/sirupsen/logrus v1.9.0
@@ -15,7 +15,9 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/kr/pretty v0.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/sergi/go-diff v1.2.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
