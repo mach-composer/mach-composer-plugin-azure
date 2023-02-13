@@ -60,7 +60,9 @@ func (a *SiteConfig) merge(c *GlobalConfig) {
 	if len(a.ServiceObjectIds) == 0 {
 		a.ServiceObjectIds = c.ServiceObjectIds
 	}
-
+	if a.ServicePlans == nil {
+		a.ServicePlans = map[string]AzureServicePlan{}
+	}
 	for k, v := range c.ServicePlans {
 		a.ServicePlans[k] = v
 	}
