@@ -32,7 +32,7 @@ type SiteConfig struct {
 	AlertGroup *AzureAlertGroup        `mapstructure:"alert_group"`
 
 	// Can overwrite values from AzureConfig
-	ResourceGroup  string
+	ResourceGroup  string `mapstructure:"resource_group"`
 	TenantID       string `mapstructure:"tenant_id"`
 	SubscriptionID string `mapstructure:"subscription_id"`
 
