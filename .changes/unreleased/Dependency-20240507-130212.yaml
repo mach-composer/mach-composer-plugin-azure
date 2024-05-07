@@ -1,0 +1,3 @@
+kind: Dependency
+body: 'chore(deps): bump golang.org/x/net from 0.7.0 to 0.23.0'
+time: 2024-05-07T13:02:12.423055048Z
