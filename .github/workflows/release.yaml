@@ -44,5 +44,5 @@ jobs:
       - name: Upload release
         uses: actions/upload-artifact@v3
         with:
-          name: mach-composer-plugin-wundergraph
+          name: mach-composer-plugin-azure
           path: dist/*
