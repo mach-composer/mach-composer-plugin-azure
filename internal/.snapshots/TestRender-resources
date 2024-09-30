@@ -111,8 +111,11 @@ locals {
 resource "azurerm_frontdoor" "app-service" {
   name                                          = format("%s-fd", local.name_prefix)
   resource_group_name                           = local.resource_group_name
-  enforce_backend_pools_certificate_name_check  = false
   tags = local.tags
+
+  backend_pool_settings {
+    enforce_backend_pools_certificate_name_check  = false
+  }
 
   backend_pool_load_balancing {
     name = "lbSettings"
