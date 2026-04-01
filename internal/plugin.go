@@ -391,13 +391,6 @@ func terraformRenderComponentVars(cfg *SiteConfig, componentCfg *SiteComponentCo
 		{{ if .Config.AlertGroup }}
 		azure_monitor_action_group_id = azurerm_monitor_action_group.alert_action_group.id
 		{{ end }}
-
-		{{ range $cEndpoint, $sEndpoint := .Endpoints }}
-		azure_endpoint_{{ $cEndpoint }} = {
-			url = local.endpoint_url_{{ $sEndpoint }}
-			frontdoor_id = azurerm_frontdoor.app-service.header_frontdoor_id
-		}
-		{{ end }}
 	`
 	return helpers.RenderGoTemplate(template, templateContext)
 }

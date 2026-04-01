@@ -22,11 +22,4 @@
 		
 		azure_monitor_action_group_id = azurerm_monitor_action_group.alert_action_group.id
 		
-
-		
-		azure_endpoint_main = {
-			url = local.endpoint_url_main
-			frontdoor_id = azurerm_frontdoor.app-service.header_frontdoor_id
-		}
-		
 	
