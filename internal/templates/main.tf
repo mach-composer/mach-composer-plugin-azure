@@ -87,7 +87,6 @@ resource "azurerm_monitor_action_group" "alert_action_group" {
 }
 {% endif %}
 
-{% include "./frontdoor.tf" %}
 {% include "./url_locals.tf" %}
 
 {% include "./app_service_plans.tf" %}

@@ -39,11 +39,13 @@ func TestRender(t *testing.T) {
 
 	t.Run("providers", func(t *testing.T) {
 		result, err := plugin.RenderTerraformProviders("my-site")
+		require.NotNil(t, result)
 		require.NoError(t, err)
 		cupaloy.SnapshotT(t, result)
 	})
 	t.Run("resources", func(t *testing.T) {
 		result, err := plugin.RenderTerraformResources("my-site")
+		require.NotNil(t, result)
 		require.NoError(t, err)
 		cupaloy.SnapshotT(t, result)
 	})
