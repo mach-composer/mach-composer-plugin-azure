@@ -15,21 +15,21 @@ jobs:
     if: github.actor == 'dependabot[bot]'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Fetch Dependabot metadata
         id: dependabot-metadata
-        uses: dependabot/fetch-metadata@v2
+        uses: dependabot/fetch-metadata@ffa630c65fa7e0ecfa0625b5ceda64399aea1b36 # v3.0.0
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Create change file
-        uses: miniscruff/changie-action@v2
+        uses: miniscruff/changie-action@5036dffa79ffc007110dc7f75eca7ef72780e147 # v2.1.0
         with:
           version: latest
           args: new --body "${{ github.event.pull_request.title }}" --kind Dependency
 
-      - uses: stefanzweifel/git-auto-commit-action@v5
+      - uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9 # v7.1.0
         with:
           commit_message: "chore(deps): add changelog for dependabot updates"
           commit_user_name: "dependabot[bot]"
